@@ -60,7 +60,7 @@
 |-------|-----------|-------|
 | Frontend | React 18 + TypeScript | Vite build tooling |
 | UI Component Library | shadcn/ui + Tailwind CSS | Purple/blue design tokens |
-| Backend | ASP.NET Core 8 (Web API) | Minimal API style |
+| Backend | ASP.NET Core 10 (Web API) | Minimal API style |
 | AI Orchestration | Azure AI Foundry (Azure OpenAI) | GPT-4o for extraction & tagging |
 | Web Scraping | .NET `HtmlAgilityPack` / `PuppeteerSharp` | Fallback to headless browser for JS-heavy pages |
 | Database | Azure Cosmos DB for NoSQL | Per-user partitioning |
@@ -83,7 +83,7 @@
                             │ HTTPS (JWT in Authorization header)
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  RecipeBoss API (ASP.NET Core 8)                │
+│                  RecipeBoss API (ASP.NET Core 10)               │
 │                    Azure Container Apps                         │
 │                                                                 │
 │  ┌─────────────┐  ┌──────────────────┐  ┌────────────────────┐ │
