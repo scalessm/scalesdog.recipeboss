@@ -1,0 +1,46 @@
+{
+  "universe_usage_history": [
+    {
+      "assignment_id": "recipeboss-2026-04-27",
+      "project": "scalesdog.recipeboss",
+      "universe": "Firefly",
+      "created_at": "2026-04-27T07:20:15.890-07:00",
+      "members": [
+        "Mal",
+        "Kaylee",
+        "Zoe",
+        "River",
+        "Book"
+      ]
+    }
+  ],
+  "assignment_cast_snapshots": {
+    "recipeboss-2026-04-27": {
+      "project": "scalesdog.recipeboss",
+      "universe": "Firefly",
+      "created_at": "2026-04-27T07:20:15.890-07:00",
+      "members": [
+        {
+          "persistent_name": "Mal",
+          "role": "Lead"
+        },
+        {
+          "persistent_name": "Kaylee",
+          "role": "Frontend Dev"
+        },
+        {
+          "persistent_name": "Zoe",
+          "role": "Backend Dev"
+        },
+        {
+          "persistent_name": "River",
+          "role": "Tester"
+        },
+        {
+          "persistent_name": "Book",
+          "role": "DevOps"
+        }
+      ]
+    }
+  }
+}
