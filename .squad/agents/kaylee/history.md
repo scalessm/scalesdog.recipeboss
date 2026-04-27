@@ -30,5 +30,9 @@
 - API client functions (`src/api/recipes.ts`) accept `accessToken: string` as first parameter; token acquisition via `useMsal` hook happens in the calling component/page.
 - Key file locations: `src/types/recipe.ts` (shared types), `src/api/recipes.ts` (API client), `src/components/RecipeCard.tsx`, `src/pages/RecipeLibraryPage.tsx`.
 - Recipe Library page pattern: `useCallback` for token getter + `useEffect` chains for tags/recipes fetch; 300ms debounce on search via `useRef<ReturnType<typeof setTimeout>>`.
-- MSAL token acquisition scope for recipe API: `["api://recipeboss/Recipes.ReadWrite"]`.
+- MSAL token acquisition scope for recipe API: `["api://recipeboss.api/Recipes.ReadWrite"]` (corrected from `api://recipeboss/Recipes.ReadWrite`).
 - 📌 2026-04-27: Built Recipe Library page and RecipeCard component against assumed Zoe backend contracts. Pushed to `dev/initial-setup`.
+- 📌 2026-04-27: Wired MSAL auth with Entra External ID. Created `AuthProvider.tsx`, `LoginButton.tsx`, updated `msalConfig.ts` env vars to `VITE_MSAL_*` prefix, added nav header to `App.tsx`. Build clean at 1953 modules.
+- `msalConfig.ts` env vars: `VITE_MSAL_CLIENT_ID`, `VITE_MSAL_AUTHORITY`, `VITE_MSAL_REDIRECT_URI`, `VITE_API_SCOPE` — all read from `.env.development`. Fallbacks hardcoded for the `api://recipeboss.api/Recipes.ReadWrite` scope.
+- `AuthProvider.tsx` owns the singleton `PublicClientApplication` instance; `main.tsx` imports `AuthProvider` rather than constructing its own `MsalProvider`.
+- `apiScopes` is the canonical export from `msalConfig.ts` for use in `acquireTokenSilent` calls across pages (e.g. `RecipeLibraryPage`).
