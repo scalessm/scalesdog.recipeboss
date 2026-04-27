@@ -21,8 +21,10 @@ export const msalConfig: Configuration = {
   },
 };
 
+// Login only requests OIDC scopes. API scopes are requested lazily via acquireTokenSilent.
+// Including API scopes here causes AADSTS650053 if the scope isn't pre-consented.
 export const loginRequest = {
-  scopes: [import.meta.env.VITE_API_SCOPE ?? "api://recipeboss.api/Recipes.ReadWrite"],
+  scopes: ["openid", "profile", "offline_access"],
 };
 
 export const apiScopes = [import.meta.env.VITE_API_SCOPE ?? "api://recipeboss.api/Recipes.ReadWrite"];
