@@ -6,8 +6,7 @@ import RecipeCard from "@/components/RecipeCard";
 import { getRecipes, getRecipeTags } from "@/api/recipes";
 import { cn } from "@/lib/utils";
 import type { RecipeSummary } from "@/types/recipe";
-
-const API_SCOPES = ["api://recipeboss/Recipes.ReadWrite"];
+import { apiScopes } from "@/auth/msalConfig";
 
 function SkeletonCard() {
   return (
@@ -40,7 +39,7 @@ export default function RecipeLibraryPage() {
 
   const getToken = useCallback(async () => {
     const result = await instance.acquireTokenSilent({
-      scopes: API_SCOPES,
+      scopes: apiScopes,
       account: accounts[0],
     });
     return result.accessToken;
