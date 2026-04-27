@@ -9,20 +9,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using RecipeBoss.Api.Infrastructure;
 using Xunit;
-
-// Integration smoke tests for the recipe endpoints using a real test host.
-//
-// KNOWN GAPS (as of 2026-04-27):
-//   1. Route mismatch: current implementation registers /api/recipes; design requires /api/v1/recipes.
-//      All 2xx/4xx tests are skipped until Zoe corrects the route prefix.
-//   2. IRecipeRepository / InMemoryRecipeRepository do not yet exist.
-//      Tests that replace the real repository with a seeded in-memory fake are skipped.
-//
-// When Zoe's implementation lands:
-//   a. Remove Skip from all tests.
-//   b. Uncomment the IRecipeRepository replacement in RecipeApiFactory.ConfigureWebHost.
-//   c. Verify all tests pass before merging.
 
 namespace RecipeBoss.Api.Tests.Endpoints;
 
@@ -69,14 +57,14 @@ public class RecipeApiFactory : WebApplicationFactory<Program>
     {
         builder.ConfigureServices(services =>
         {
-            // Replace auth with test scheme (always succeeds when Authorization header present)
             services.AddAuthentication(TestAuthHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
                     TestAuthHandler.SchemeName, _ => { });
 
-            // TODO (pending Zoe's implementation): replace IRecipeRepository with InMemoryRecipeRepository
-            // services.RemoveAll<IRecipeRepository>();
-            // services.AddSingleton<IRecipeRepository, InMemoryRecipeRepository>();
+            var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IRecipeRepository));
+            if (descriptor != null)
+                services.Remove(descriptor);
+            services.AddSingleton<IRecipeRepository, InMemoryRecipeRepository>();
         });
 
         builder.UseEnvironment("Development");
@@ -99,7 +87,7 @@ public class RecipeEndpointsTests : IClassFixture<RecipeApiFactory>
 
     // ── GET /api/v1/recipes ───────────────────────────────────────────────────
 
-    [Fact(Skip = "Pending Zoe's implementation: route /api/v1/recipes not yet registered (currently /api/recipes); IRecipeRepository not yet available")]
+    [Fact]
     public async Task GetRecipes_Authenticated_Returns200WithList()
     {
         _client.DefaultRequestHeaders.Authorization = BearerToken();
@@ -107,7 +95,7 @@ public class RecipeEndpointsTests : IClassFixture<RecipeApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    [Fact(Skip = "Pending Zoe's implementation: route /api/v1/recipes not yet registered (currently /api/recipes)")]
+    [Fact]
     public async Task GetRecipes_NoAuthToken_Returns401()
     {
         _client.DefaultRequestHeaders.Authorization = null;
@@ -115,27 +103,25 @@ public class RecipeEndpointsTests : IClassFixture<RecipeApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    [Fact(Skip = "Pending Zoe's implementation: route /api/v1/recipes not yet registered; IRecipeRepository / query filtering not yet available")]
+    [Fact]
     public async Task GetRecipes_WithQFilter_ReturnsFilteredResults()
     {
         _client.DefaultRequestHeaders.Authorization = BearerToken();
         var response = await _client.GetAsync("/api/v1/recipes?q=carbonara");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        // Assert: response body contains only recipes matching "carbonara"
     }
 
-    [Fact(Skip = "Pending Zoe's implementation: route /api/v1/recipes not yet registered; IRecipeRepository / tag filtering not yet available")]
+    [Fact]
     public async Task GetRecipes_WithTagsFilter_ReturnsAndFilteredResults()
     {
         _client.DefaultRequestHeaders.Authorization = BearerToken();
         var response = await _client.GetAsync("/api/v1/recipes?tags=Italian,Pasta");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        // Assert: every recipe in response has both "Italian" AND "Pasta" tags
     }
 
     // ── GET /api/v1/recipes/tags ──────────────────────────────────────────────
 
-    [Fact(Skip = "Pending Zoe's implementation: /api/v1/recipes/tags endpoint not yet registered; IRecipeRepository not yet available")]
+    [Fact]
     public async Task GetTags_Authenticated_Returns200WithTagList()
     {
         _client.DefaultRequestHeaders.Authorization = BearerToken();
@@ -143,7 +129,7 @@ public class RecipeEndpointsTests : IClassFixture<RecipeApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    [Fact(Skip = "Pending Zoe's implementation: /api/v1/recipes/tags endpoint not yet registered")]
+    [Fact]
     public async Task GetTags_NoAuthToken_Returns401()
     {
         _client.DefaultRequestHeaders.Authorization = null;
