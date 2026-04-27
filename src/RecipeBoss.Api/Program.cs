@@ -1,27 +1,28 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using RecipeBoss.Api.Endpoints;
 using RecipeBoss.Api.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Auth — Microsoft Entra External ID
-builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration);
+// CORS — named dev policy covering both Vite default ports
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DevCors", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
+// Auth — Microsoft Entra External ID via JWT Bearer
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
 builder.Services.AddAuthorization();
 
 // OpenAPI
 builder.Services.AddOpenApi();
-
-// CORS — allow frontend origin (configure via config in production)
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        policy.WithOrigins(
-            builder.Configuration["Frontend:BaseUrl"] ?? "http://localhost:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
-});
 
 // Repositories
 builder.Services.AddSingleton<IRecipeRepository, InMemoryRecipeRepository>();
@@ -33,7 +34,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseCors();
+app.UseCors("DevCors");
 app.UseAuthentication();
 app.UseAuthorization();
 
