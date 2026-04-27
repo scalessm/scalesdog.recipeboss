@@ -1,7 +1,13 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
+// Add Cosmos DB (emulator for local dev, real DB for azd up)
+var cosmos = builder.AddAzureCosmosDB("cosmos")
+    .RunAsEmulator();
+
 // Add the RecipeBoss API
-var api = builder.AddProject<Projects.RecipeBoss_Api>("recipeboss-api");
+var api = builder.AddProject<Projects.RecipeBoss_Api>("recipeboss-api")
+    .WithReference(cosmos)
+    .WaitFor(cosmos);
 
 // Add the React frontend as a Vite dev server (local dev only)
 builder.AddNpmApp("frontend", "../frontend", scriptName: "dev")
