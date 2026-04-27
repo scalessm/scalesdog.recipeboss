@@ -231,6 +231,16 @@ Status: ✅ APPROVED. All blockers from the scaffold decision resolved by Zoe.
 
 **Verdict:** Clear to merge into `dev/initial-setup`. No follow-up on API implementation needed.
 
+### MSAL Frontend Auth—Login Scopes & Error Surfacing (Kaylee, 2026-04-27)
+
+Diagnosed and fixed silent MSAL login failure. Root cause: `loginRequest.scopes` in `msalConfig.ts` included the API scope `api://recipeboss.api/Recipes.ReadWrite`, causing Entra to reject the authorization request before any login UI appeared (error: `AADSTS650053`). 
+
+**Fixes applied:**
+1. `loginRequest.scopes` changed to OIDC-only (`["openid", "profile", "offline_access"]`). API scopes remain in `apiScopes` constant for lazy `acquireTokenSilent` calls after authentication.
+2. `AuthCallbackPage.tsx` now captures hash fragments synchronously and displays error descriptions instead of silently redirecting on Entra error responses.
+
+**Remaining action:** Verify `Recipes.ReadWrite` scope is registered and admin-consented in Entra portal (37cb3b50-4dda-40f9-a3a9-c06f069bfacc → Expose an API). Commit: a00e985, branch: dev/initial-setup.
+
 ## Governance
 
 - All meaningful changes require team consensus
