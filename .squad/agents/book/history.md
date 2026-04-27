@@ -15,6 +15,7 @@
 
 - 📌 Team cast initialized on 2026-04-27 with Book as DevOps.
 - 📌 Deployment and infrastructure requirements are defined in `DESIGN.md`.
+- 📌 **2026-04-27 17:32:56Z:** Cosmos DB emulator updated to vnext-preview (ARM64 compatible). Decision logged, build passed, pushed dev/cosmos-db.
 
 ## Learnings
 
@@ -26,3 +27,4 @@
 - ServiceDefaults project reference in AppHost must use `IsAspireProjectResource="false"` to suppress ASPIRE004 warning (ServiceDefaults is a library, not an executable resource).
 - `Microsoft.Azure.Cosmos` v3.59.0 requires explicit Newtonsoft.Json or `AzureCosmosDisableNewtonsoftJsonCheck=true` in the csproj. RecipeBoss API uses System.Text.Json so the bypass property is set.
 - Aspire scaffold generates `appsettings.Development.json` in AppHost by default; connection string stubs for CosmosDb and BlobStorage were appended to that file.
+- The original `mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator` image is x86-only and fails on ARM64. Microsoft's `vnext-preview` tag is multi-arch (amd64 + arm64/v8). AppHost now uses `RunAsEmulator(e => e.WithImageTag("vnext-preview"))` unconditionally — Aspire ignores `RunAsEmulator` in publish mode and provisions real Azure Cosmos DB from the manifest instead.
