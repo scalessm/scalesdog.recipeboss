@@ -20,3 +20,9 @@
 
 - River acts as both test owner and reviewer gate.
 - Reviewer rejection lockout must be enforced on rejected artifacts.
+- Use `public partial class Program {}` at the end of `Program.cs` to expose the top-level Program class to `WebApplicationFactory<Program>` in the test project. This is the standard minimal-API pattern.
+- Suppress CA1707 in the test `.csproj` via `<NoWarn>$(NoWarn);CA1707</NoWarn>` — underscore-separated test names (`Method_Scenario_Expected`) are xUnit convention and the analyzer fires otherwise.
+- For `WebApplicationFactory` auth replacement: register a custom `AuthenticationHandler` that reads the `Authorization` header and succeeds with a fixed `oid` claim. This keeps test auth hermetic.
+- Contract gap found (2026-04-27): Current `RecipeEndpoints.cs` registers routes under `/api/recipes`; DESIGN.md specifies the base as `/api/v1`. **Zoe must correct the route prefix** before any endpoint smoke tests can be unskipped.
+- Contract gap found (2026-04-27): `IRecipeRepository` and `InMemoryRecipeRepository` do not yet exist in `RecipeBoss.Api`. All 10 repository unit tests and all 6 endpoint integration tests are pending these types.
+- `GET /recipes/tags` is not yet wired in `RecipeEndpoints.cs` — the endpoint stub only has `GET /`, `GET /{id}`, `POST /import`, `PUT /{id}`, `DELETE /{id}`, `PUT /{id}/rating`.
