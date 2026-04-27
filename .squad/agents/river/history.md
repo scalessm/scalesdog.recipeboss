@@ -26,3 +26,5 @@
 - Contract gap found (2026-04-27): Current `RecipeEndpoints.cs` registers routes under `/api/recipes`; DESIGN.md specifies the base as `/api/v1`. **Zoe must correct the route prefix** before any endpoint smoke tests can be unskipped.
 - Contract gap found (2026-04-27): `IRecipeRepository` and `InMemoryRecipeRepository` do not yet exist in `RecipeBoss.Api`. All 10 repository unit tests and all 6 endpoint integration tests are pending these types.
 - `GET /recipes/tags` is not yet wired in `RecipeEndpoints.cs` — the endpoint stub only has `GET /`, `GET /{id}`, `POST /import`, `PUT /{id}`, `DELETE /{id}`, `PUT /{id}/rating`.
+- 📌 2026-04-27 (follow-up): Zoe's implementation delivered all contract items. Unskipped all 16 tests. Verified claim extraction. Result: **16/16 tests passing** ✓
+- **RESOLVED (2026-04-27 14:02)**: Zoe implemented `IRecipeRepository`, `InMemoryRecipeRepository`, and both endpoints (`GET /api/v1/recipes` and `GET /api/v1/recipes/tags`). All 16 tests now pass. Tags are passed as comma-separated query string (`?tags=Italian,Pasta`) as designed.

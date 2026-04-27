@@ -25,3 +25,10 @@
 - TypeScript path aliases (`@/*` → `src/*`) require both `tsconfig.app.json` (`baseUrl` + `paths`) and `vite.config.ts` (`resolve.alias`) to be updated.
 - Tailwind v4 no longer uses a `tailwind.config.js`; configuration is done entirely via the Vite plugin and CSS `@import "tailwindcss"`.
 - Build verified clean: 186 modules, 228ms. Use `npm run build` from `frontend/` to validate.
+- `tsconfig.json` has `verbatimModuleSyntax: true` — always use `import type` for type-only imports.
+- `tsconfig.json` has `noUnusedLocals: true` and `noUnusedParameters: true` — keep imports and variables tight.
+- API client functions (`src/api/recipes.ts`) accept `accessToken: string` as first parameter; token acquisition via `useMsal` hook happens in the calling component/page.
+- Key file locations: `src/types/recipe.ts` (shared types), `src/api/recipes.ts` (API client), `src/components/RecipeCard.tsx`, `src/pages/RecipeLibraryPage.tsx`.
+- Recipe Library page pattern: `useCallback` for token getter + `useEffect` chains for tags/recipes fetch; 300ms debounce on search via `useRef<ReturnType<typeof setTimeout>>`.
+- MSAL token acquisition scope for recipe API: `["api://recipeboss/Recipes.ReadWrite"]`.
+- 📌 2026-04-27: Built Recipe Library page and RecipeCard component against assumed Zoe backend contracts. Pushed to `dev/initial-setup`.
