@@ -23,7 +23,7 @@ public class InMemoryRecipeRepository : IRecipeRepository
 
     private static IEnumerable<Recipe> SeedData()
     {
-        const string devUser = "dev-user-001";
+        const string devUser = "94292461-bcf8-47e4-9c38-95fab9099bd3";
         return
         [
             new Recipe
