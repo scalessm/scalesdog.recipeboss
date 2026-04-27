@@ -13,4 +13,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    port: parseInt(process.env.VITE_PORT ?? '5173'),
+    strictPort: true,
+  },
 })
