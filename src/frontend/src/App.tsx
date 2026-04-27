@@ -7,6 +7,7 @@ import RecipeDetailPage from './pages/RecipeDetailPage'
 import EditRecipePage from './pages/EditRecipePage'
 import ProfilePage from './pages/ProfilePage'
 import LoginPage from './pages/LoginPage'
+import { AuthCallbackPage } from './pages/AuthCallbackPage'
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/recipes/:id/edit" element={<EditRecipePage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth" element={<AuthCallbackPage />} />
       </Routes>
     </>
   )
