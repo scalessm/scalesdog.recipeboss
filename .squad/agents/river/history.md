@@ -28,3 +28,4 @@
 - `GET /recipes/tags` is not yet wired in `RecipeEndpoints.cs` — the endpoint stub only has `GET /`, `GET /{id}`, `POST /import`, `PUT /{id}`, `DELETE /{id}`, `PUT /{id}/rating`.
 - 📌 2026-04-27 (follow-up): Zoe's implementation delivered all contract items. Unskipped all 16 tests. Verified claim extraction. Result: **16/16 tests passing** ✓
 - **RESOLVED (2026-04-27 14:02)**: Zoe implemented `IRecipeRepository`, `InMemoryRecipeRepository`, and both endpoints (`GET /api/v1/recipes` and `GET /api/v1/recipes/tags`). All 16 tests now pass. Tags are passed as comma-separated query string (`?tags=Italian,Pasta`) as designed.
+- 📌 2026-04-27 (cross-agent): auth-entra session complete. JWT Bearer middleware wired by Zoe (zoe-3); MSAL wired by Kaylee (kaylee-2). All 16 tests including authenticated endpoint flows confirmed passing. `TestAuthHandler` `oid`/`sub` claim pattern is compatible with real JWT auth middleware — no test changes needed for auth wiring.

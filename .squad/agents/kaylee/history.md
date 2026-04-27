@@ -36,3 +36,4 @@
 - `msalConfig.ts` env vars: `VITE_MSAL_CLIENT_ID`, `VITE_MSAL_AUTHORITY`, `VITE_MSAL_REDIRECT_URI`, `VITE_API_SCOPE` — all read from `.env.development`. Fallbacks hardcoded for the `api://recipeboss.api/Recipes.ReadWrite` scope.
 - `AuthProvider.tsx` owns the singleton `PublicClientApplication` instance; `main.tsx` imports `AuthProvider` rather than constructing its own `MsalProvider`.
 - `apiScopes` is the canonical export from `msalConfig.ts` for use in `acquireTokenSilent` calls across pages (e.g. `RecipeLibraryPage`).
+- 📌 2026-04-27 (cross-agent): auth-entra session complete. Zoe (zoe-3) wired JWT Bearer middleware; CORS "DevCors" covers localhost:5173 and 5174. Backend `appsettings.json` now has matching AzureAd section (Audience: `api://recipeboss.api`). River confirmed all 16 tests pass — frontend auth contracts are correct.

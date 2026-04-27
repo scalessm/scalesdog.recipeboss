@@ -59,6 +59,25 @@ Local development: `dotnet run --project RecipeBoss.AppHost` launches the Aspire
 
 **SDK version gap:** `global.json` specifies .NET 10 SDK; all `dotnet` CLI commands must be run from outside the repo directory until SDK is available.
 
+### Entra External ID Auth Architecture (Mal, 2026-04-27)
+
+RecipeBoss uses Entra External ID on tenant `scalesdog.onmicrosoft.com` with two app registrations: React SPA (frontend) and ASP.NET Core API (backend).
+
+**Key Decisions:**
+1. **Authority URL:** `https://login.microsoftonline.com/scalesdog.onmicrosoft.com` — standard endpoint preferred over `ciamlogin.com`; latter is only required for Custom URL Domains or CIAM-specific B2C policies.
+2. **Scope:** `api://recipeboss.api/Recipes.ReadWrite` — App ID URI is `api://recipeboss.api` (registered on API app registration `37cb3b50-4dda-40f9-a3a9-c06f069bfacc`). Old placeholder `api://recipeboss/Recipes.ReadWrite` was incorrect and has been removed from all references.
+3. **Env vars committed to `.env.development`** — Client IDs and authority URLs are public values visible in JS bundles. Committing to `.env.development` ensures all developers get correct values without manual setup. Secrets go in `.env.local` (gitignored via `*.local`).
+4. **`AzureAd` config structure in `appsettings.json`:**
+   ```json
+   "AzureAd": {
+     "Instance": "https://login.microsoftonline.com/",
+     "TenantId": "scalesdog.onmicrosoft.com",
+     "ClientId": "37cb3b50-4dda-40f9-a3a9-c06f069bfacc",
+     "Audience": "api://recipeboss.api"
+   }
+   ```
+   `Instance` + `TenantId` form the authority. `Audience` must match App ID URI exactly for `aud` claim validation.
+
 ## Frontend
 
 ### Frontend Scaffold Architecture Decisions (Kaylee, 2026-04-27)
@@ -90,6 +109,19 @@ Built the Recipe Library page and RecipeCard component against assumed backend c
 **Auth:** All endpoints expect `Authorization: Bearer <token>` using scope `api://recipeboss/Recipes.ReadWrite`.
 
 **Open questions:** (1) Tags filter format (comma-separated or repeated params)? (2) Pagination style (cursor/offset)? (3) Image URLs (absolute or relative)? (4) Tags endpoint scoped per user or global?
+
+### MSAL Frontend Auth Integration (Kaylee, 2026-04-27)
+
+Implemented and shipped on `dev/initial-setup`. Entra External ID tenant config applied to the SPA.
+
+**Key Decisions:**
+1. **Canonical env var names: `VITE_MSAL_*` prefix.** `msalConfig.ts` reads `VITE_MSAL_CLIENT_ID`, `VITE_MSAL_AUTHORITY`, `VITE_MSAL_REDIRECT_URI`, and `VITE_API_SCOPE`. Old `VITE_ENTRA_*` names deprecated and removed.
+2. **Scope corrected to `api://recipeboss.api/Recipes.ReadWrite`.** Both `msalConfig.ts` and `RecipeLibraryPage.tsx` now import `apiScopes` from `@/auth/msalConfig`.
+3. **AuthProvider pattern:** `PublicClientApplication` constructed once in `auth/AuthProvider.tsx`. `main.tsx` imports `<AuthProvider>` — avoids duplicate MSAL instances.
+4. **LoginButton uses design tokens** (`var(--color-primary)`) not raw Tailwind color classes — consistent with `index.css` token system. Tailwind v4 compatible.
+5. **Nav header added to `App.tsx`:** Persistent top nav with brand link, Library and Import links, and `LoginButton`. Nav uses `--color-surface` background token.
+
+**Open Questions:** (1) Redirect URI in production (Static Web Apps URL)? Currently falls back to `window.location.origin`. (2) Backend JWT validation authority should match `https://login.microsoftonline.com/scalesdog.onmicrosoft.com`.
 
 ## Backend
 
@@ -135,6 +167,19 @@ RecipeBoss.Api/
 
 **Route Prefix:** `/api/v1/recipes` (version segment per API design conventions).
 
+### JWT Bearer Authentication — Entra External ID (Zoe, 2026-04-27)
+
+Implemented real JWT Bearer auth validated against Entra External ID, replacing stub auth call.
+
+**Key Decisions:**
+1. **Auth Registration Pattern:** `AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddMicrosoftIdentityWebApi(config.GetSection("AzureAd"))` — explicit scheme, better self-documenting, canonical Microsoft.Identity.Web v4 usage.
+2. **Explicit `Microsoft.AspNetCore.Authentication.JwtBearer` 10.0.7 package reference** — prevents version drift from transitive `Microsoft.Identity.Web` dependency.
+3. **Named CORS Policy `"DevCors"`** — covers `http://localhost:5173` and `http://localhost:5174` (Vite fallback port). Named policies are explicit and composable.
+4. **Middleware Order:** `UseCors("DevCors")` → `UseAuthentication()` → `UseAuthorization()` → endpoint mapping. CORS must precede auth to avoid 401 on OPTIONS preflight requests.
+5. **`appsettings.json` AzureAd values:** Instance `https://login.microsoftonline.com/`, TenantId `scalesdog.onmicrosoft.com`, ClientId `37cb3b50-4dda-40f9-a3a9-c06f069bfacc`, Audience `api://recipeboss.api`. `appsettings.Development.json` does **not** override AzureAd.
+
+**Outcome:** All 16 tests pass. `TestAuthHandler` populates `oid`/`sub` claims matching endpoint claim extraction logic.
+
 ## Testing
 
 ### Test Scaffold Decision: RecipeBoss.Api.Tests (River, 2026-04-27)
@@ -163,6 +208,28 @@ Created `src/RecipeBoss.Api.Tests/` as an xUnit 2.9.3 project targeting net10.0.
 4. **Missing `GET /recipes/tags` endpoint** — must add alongside route prefix fix.
 
 **Unskip Checklist:** When Zoe's implementation lands, River must remove `[Fact(Skip = ...)]` from all 16 tests, uncomment `IRecipeRepository` replacement in test factory, verify `TestAuthHandler` claim name matches endpoint extraction, and run full suite to confirm 16/16 pass.
+
+### Test Verdict — Auth Session: All 16/16 Pass (River, 2026-04-27)
+
+Status: ✅ APPROVED. All blockers from the scaffold decision resolved by Zoe.
+
+| Suite | Tests | Result |
+|---|---|---|
+| InMemoryRecipeRepository unit tests | 10 | ✅ Pass |
+| RecipeEndpoints integration tests | 6 | ✅ Pass |
+| **Total** | **16** | **✅ 16/16** |
+
+**Contract Verification:**
+- Route prefix `/api/v1/recipes` ✅
+- Tags parameter comma-separated (`?tags=Italian,Pasta`) confirmed ✅
+- `IRecipeRepository` + `InMemoryRecipeRepository` present ✅
+- 4 seed recipes for `dev-user-001` ✅
+
+**Test Changes by River:**
+- `InMemoryRecipeRepositoryTests.cs`: Full implementations added (user isolation, search, tag AND-filter, pagination, distinct tags)
+- `RecipeEndpointsTests.cs`: All `[Fact(Skip=...)]` removed; `InMemoryRecipeRepository` registered in test factory; `services.RemoveAll<IRecipeRepository>()` refactored
+
+**Verdict:** Clear to merge into `dev/initial-setup`. No follow-up on API implementation needed.
 
 ## Governance
 
