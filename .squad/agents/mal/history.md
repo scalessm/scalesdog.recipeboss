@@ -27,3 +27,5 @@
 - The .NET 10 SDK is not yet installed on the dev machine (only 9.0.300 is present). Run `dotnet sln` commands from the parent of the repo root to bypass `global.json` and use the available SDK.
 - The frontend (`recipeboss-frontend/`) must never be added to `RecipeBoss.sln` — it is a standalone Node/Vite project.
 - Decision `mal-solution-structure.md` was written to `.squad/decisions/inbox/` covering directory layout and project naming conventions.
+- 2026-04-27: Restructured repo to move all source projects into `src\`. `ProjectReference` paths between sibling projects (`../RecipeBoss.X/...`) and the AppHost→frontend path (`../frontend`) required no changes after the move, as all projects remained siblings within `src\`. Only the `.sln` file needed updating via `dotnet sln remove/add`.
+- Transitive Aspire dependencies (e.g. KubernetesClient) trigger NuGet audit vulnerability warnings that become errors under `TreatWarningsAsErrors`. Resolved by setting `NuGetAuditMode=direct` in `Directory.Build.props` to scope audits to our own package references only.

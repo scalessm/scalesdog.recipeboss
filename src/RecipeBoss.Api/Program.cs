@@ -1,5 +1,6 @@
 using Microsoft.Identity.Web;
 using RecipeBoss.Api.Endpoints;
+using RecipeBoss.Api.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,9 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+
+// Repositories
+builder.Services.AddSingleton<IRecipeRepository, InMemoryRecipeRepository>();
 
 var app = builder.Build();
 
