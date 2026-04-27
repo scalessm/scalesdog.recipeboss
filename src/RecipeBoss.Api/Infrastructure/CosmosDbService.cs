@@ -1,3 +1,5 @@
+using System.Net;
+using Microsoft.Azure.Cosmos;
 using RecipeBoss.Api.Models;
 
 namespace RecipeBoss.Api.Infrastructure;
@@ -208,49 +210,108 @@ public class InMemoryRecipeRepository : IRecipeRepository
 }
 
 /// <summary>
-/// Cosmos DB repository stub — to be implemented once Cosmos DB is provisioned.
-/// Reads connection string from IConfiguration["CosmosDb:ConnectionString"].
-/// Partition key strategy: /userId for per-user data isolation.
+/// Cosmos DB repository backed by the "recipeboss" database, "recipes" container.
+/// Partition key: /userId for per-user data isolation.
 /// </summary>
 public class CosmosRecipeRepository : IRecipeRepository
 {
-    private readonly IConfiguration _configuration;
+    private readonly Container _container;
+    private readonly ILogger<CosmosRecipeRepository> _logger;
 
-    public CosmosRecipeRepository(IConfiguration configuration)
+    public CosmosRecipeRepository(CosmosClient cosmosClient, ILogger<CosmosRecipeRepository> logger)
     {
-        _configuration = configuration;
-        // TODO: Initialise CosmosClient using _configuration["CosmosDb:ConnectionString"]
-        // TODO: Get container reference: database "recipeboss", container "recipes"
+        _container = cosmosClient.GetContainer("recipeboss", "recipes");
+        _logger = logger;
     }
 
-    public Task<IEnumerable<Recipe>> GetRecipesAsync(
+    public async Task<IEnumerable<Recipe>> GetRecipesAsync(
         string userId, string? query, IEnumerable<string>? tags, int page, int pageSize, CancellationToken ct = default)
     {
-        // TODO: Query Cosmos with LINQ or SQL API scoped to userId partition
-        throw new NotImplementedException("CosmosRecipeRepository is not yet implemented.");
+        var skip = (page - 1) * pageSize;
+        var sql = "SELECT * FROM c WHERE c.userId = @userId";
+
+        if (!string.IsNullOrWhiteSpace(query))
+            sql += " AND contains(c.title, @q)";
+
+        var tagList = tags?.ToList() ?? [];
+        if (tagList.Count > 0)
+        {
+            for (var i = 0; i < tagList.Count; i++)
+                sql += $" AND ARRAY_CONTAINS(c.tags, @tag{i})";
+        }
+
+        sql += " ORDER BY c.importedAt DESC OFFSET @skip LIMIT @take";
+
+        var qd = new QueryDefinition(sql).WithParameter("@userId", userId);
+
+        if (!string.IsNullOrWhiteSpace(query))
+            qd = qd.WithParameter("@q", query.Trim());
+
+        for (var i = 0; i < tagList.Count; i++)
+            qd = qd.WithParameter($"@tag{i}", tagList[i]);
+
+        qd = qd.WithParameter("@skip", skip).WithParameter("@take", pageSize);
+
+        var results = new List<Recipe>();
+        using var iterator = _container.GetItemQueryIterator<Recipe>(qd,
+            requestOptions: new QueryRequestOptions { PartitionKey = new PartitionKey(userId) });
+
+        while (iterator.HasMoreResults)
+        {
+            var page_ = await iterator.ReadNextAsync(ct);
+            results.AddRange(page_);
+        }
+
+        return results;
     }
 
-    public Task<IEnumerable<string>> GetTagsAsync(string userId, CancellationToken ct = default)
+    public async Task<IEnumerable<string>> GetTagsAsync(string userId, CancellationToken ct = default)
     {
-        // TODO: Query distinct tags from Cosmos for userId partition
-        throw new NotImplementedException("CosmosRecipeRepository is not yet implemented.");
+        var qd = new QueryDefinition(
+            "SELECT DISTINCT VALUE t FROM c JOIN t IN c.tags WHERE c.userId = @userId")
+            .WithParameter("@userId", userId);
+
+        var tags = new List<string>();
+        using var iterator = _container.GetItemQueryIterator<string>(qd,
+            requestOptions: new QueryRequestOptions { PartitionKey = new PartitionKey(userId) });
+
+        while (iterator.HasMoreResults)
+        {
+            var page = await iterator.ReadNextAsync(ct);
+            tags.AddRange(page);
+        }
+
+        return tags;
     }
 
-    public Task<Recipe?> GetRecipeAsync(string userId, string recipeId, CancellationToken ct = default)
+    public async Task<Recipe?> GetRecipeAsync(string userId, string recipeId, CancellationToken ct = default)
     {
-        // TODO: Point-read by (recipeId, userId) partition key
-        throw new NotImplementedException("CosmosRecipeRepository is not yet implemented.");
+        try
+        {
+            var response = await _container.ReadItemAsync<Recipe>(recipeId, new PartitionKey(userId), cancellationToken: ct);
+            return response.Resource;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
     }
 
-    public Task<Recipe> UpsertRecipeAsync(Recipe recipe, CancellationToken ct = default)
+    public async Task<Recipe> UpsertRecipeAsync(Recipe recipe, CancellationToken ct = default)
     {
-        // TODO: UpsertItemAsync into Cosmos container partitioned by userId
-        throw new NotImplementedException("CosmosRecipeRepository is not yet implemented.");
+        var response = await _container.UpsertItemAsync(recipe, new PartitionKey(recipe.UserId), cancellationToken: ct);
+        return response.Resource;
     }
 
-    public Task DeleteRecipeAsync(string userId, string recipeId, CancellationToken ct = default)
+    public async Task DeleteRecipeAsync(string userId, string recipeId, CancellationToken ct = default)
     {
-        // TODO: DeleteItemAsync by (recipeId, userId) partition key
-        throw new NotImplementedException("CosmosRecipeRepository is not yet implemented.");
+        try
+        {
+            await _container.DeleteItemAsync<Recipe>(recipeId, new PartitionKey(userId), cancellationToken: ct);
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            // Idempotent — item already gone
+        }
     }
 }

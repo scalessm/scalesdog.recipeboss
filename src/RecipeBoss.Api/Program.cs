@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Identity.Web;
 using RecipeBoss.Api.Endpoints;
 using RecipeBoss.Api.Infrastructure;
@@ -24,8 +25,25 @@ builder.Services.AddAuthorization();
 // OpenAPI
 builder.Services.AddOpenApi();
 
-// Repositories
-builder.Services.AddSingleton<IRecipeRepository, InMemoryRecipeRepository>();
+// Cosmos DB
+var cosmosConnectionString = builder.Configuration.GetConnectionString("cosmos");
+if (!string.IsNullOrEmpty(cosmosConnectionString))
+{
+    builder.Services.AddSingleton(new CosmosClient(cosmosConnectionString, new CosmosClientOptions
+    {
+        SerializerOptions = new CosmosSerializationOptions
+        {
+            PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+        },
+        AllowBulkExecution = true
+    }));
+    builder.Services.AddSingleton<IRecipeRepository, CosmosRecipeRepository>();
+}
+else
+{
+    // Fall back to in-memory for environments where Cosmos is not configured
+    builder.Services.AddSingleton<IRecipeRepository, InMemoryRecipeRepository>();
+}
 
 var app = builder.Build();
 
@@ -39,6 +57,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRecipeEndpoints();
+
+// Seed database on startup in development
+if (app.Environment.IsDevelopment())
+{
+    var cosmosClient = app.Services.GetService<CosmosClient>();
+    if (cosmosClient is not null)
+    {
+        var seedLogger = app.Services.GetRequiredService<ILogger<Program>>();
+        var seedUserOid = app.Configuration["SeedData:UserOid"] ?? "";
+        if (!string.IsNullOrEmpty(seedUserOid))
+            await RecipeSeeder.SeedAsync(cosmosClient, seedUserOid, seedLogger);
+    }
+}
 
 app.Run();
 
